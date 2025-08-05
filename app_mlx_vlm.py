@@ -40,7 +40,7 @@ Your sole purpose is to analyze meal images and provide structured nutritional i
 * The JSON object MUST have EXACTLY these four keys: 
 * `meal_title`: A concise, descriptive name for the meal.
 * `food_items`: A list of strings, where each string is a detected food item.
-* `nutrition_info`: A dictionary containing estimated nutritional values. This MUST include keys for `calories_kcal`, `protein_g`, `carbs_g`, and `fat_g`. Provide reasonable estimations in a single numeric value. 
+* `nutrition_info`: A dictionary containing estimated nutritional values. This MUST include keys for `calories_kcal`, `protein_g`, `carbs_g`, and `fat_g`. Provide reasonable estimations in a single numeric value, NOT a range.
 * `comments`: A string providing in-depth, helpful and non-judgmental comments and recommendations on the meal's nutritional value based on all the goals of your client. Comment explicitly on all the goals and give recommendations if applicable.
 
 2. **Handle Non-Food Images:** 
@@ -59,7 +59,7 @@ Here is the list of foods and their nutrition info and comments your client had 
 In less than 150 words, provide a single-paragraph summary of the OVERALL daily nutritional balance based on all the goals of your client.
 Do NOT comment on any individual meal. 
 Comment explicitly on all the goals of your client and give recommendations if applicable.
-Do NOT provide numbers.
+Do NOT provide numbers. Do NOT include a disclaimer.
 """
 
 nutrition_goals = [
@@ -164,7 +164,7 @@ def process_numbers_from_string(text):
         return int(numbers[0])
     elif len(numbers) == 2:
         # For two numbers, calculate and return their mean
-        return sum(numbers) // 2
+        return int(sum(numbers) // 2)
     else:
         # For any other count (0 or > 2), return None
         print(f"Warning: Found {len(numbers)} numbers. Returning None.")
@@ -194,6 +194,7 @@ for i, goal in enumerate(nutrition_goals):
         is_checked = st.checkbox(goal, key=goal)
         selected_goals[goal] = is_checked
 
+selected_goals_str = ""
 if any(selected_goals.values()):
     # Get a list of the goals that were checked
     goals_list = [goal for goal, is_checked in selected_goals.items() if is_checked]
@@ -224,18 +225,18 @@ if uploaded_files:
             st.image(image, caption=os.path.basename(image), use_container_width=True)
 
     # Run the multimodal model
-    # print(input_prompt1(selected_goals_str))
-    # print('++++++++++++++++++++++++')
+    print(input_prompt1(selected_goals_str))
+    print('++++++++++++++++++++++++')
     response1 = run_model(input_prompt1(selected_goals_str), images)
-    # print(response1)
-    # print('++++++++++++++++++++++++')
+    print(response1)
+    print('++++++++++++++++++++++++')
     json_obj = extract_json_from_string(response1)
     # print(json_obj)
-    # print('========================')
-    # print(input_prompt2(json_obj))
-    # print('++++++++++++++++++++++++')
+    print('========================')
+    print(input_prompt2(json_obj))
+    print('++++++++++++++++++++++++')
     response2 = run_model(input_prompt2(json_obj))
-    # print(response2)
+    print(response2)
 
     # Genenrate a response to the user
     list_meals = [obj['meal_title'] for obj in json_obj]
