@@ -1,10 +1,13 @@
 import streamlit as st
-from mlx_vlm import load, generate
-from mlx_vlm.prompt_utils import apply_chat_template
-import json, re
+from transformers import pipeline
+import torch
+import os, json, re
 import tempfile
 
-model_id = "mlx-community/gemma-3n-E4B-it-4bit"
+# write access token in secrets or .bashrc
+token = os.environ.get('HF_TOKEN')
+
+model_id = "google/gemma-3n-e2b-it"
 image_types = ["jpg", "jpeg", "png", "bmp", "webp", "tiff"]
 
 def input_prompt1(selected_goals_str):
@@ -36,7 +39,7 @@ Your sole purpose is to analyze meal images and provide structured nutritional i
 ```json
 {json_string} 
 ```
-* The JSON object MUST have EXACTLY these four keys:
+* The JSON object MUST have EXACTLY these four keys: 
 * `meal_title`: A concise, descriptive title for the meal.
 * `food_items`: A list of strings, where each string is a detected food item.
 * `nutrition_info`: A dictionary containing estimated nutritional values. This MUST include keys for `calories_kcal`, `protein_g`, `carbs_g`, and `fat_g`. Provide reasonable estimations in a single number.
@@ -78,18 +81,40 @@ nutrition_goals = [
 
 @st.cache_resource
 def model_setup(model_id):
-    model, processor = load(model_id)
-    return model, processor
-
-def run_model(prompt,images=[]):
-    # Apply chat template
-    formatted_prompt = apply_chat_template(
-        processor, model.config, prompt,
-        num_images=len(images)
+    pipe = pipeline(
+    "image-text-to-text",
+    model=model_id,
+    device="mps",
+    torch_dtype=torch.bfloat16,
+    use_auth_token=token,
     )
+    return pipe
+
+def run_model(prompt,image=[]):
+    # Construct the input 
+    content = []
+
+    # Add text
+    content.append({"type": "text", "text": 'Strictly follow the system instructions.'})
+
+    # Add image
+    for img in image:
+        content.append({"type": "image", "image": img})
+
+    messages = [
+    {
+        "role": "system",
+        "content": [{"type": "text", "text": prompt}]
+    },
+    {
+        "role": "user",
+        "content": content
+    }
+    ]
+
     # Generate output
-    output = generate(model, processor, formatted_prompt, images, max_tokens=2000, temperature=0.2, verbose=False) # prompt_cache=prompt_cache
-    return output.text
+    output = pipe(text=messages, max_new_tokens=2000) #, temperature=0.2, verbose=False)
+    return output[0]["generated_text"][-1]["content"]
 
 def initialize():
     """
@@ -169,7 +194,7 @@ def process_numbers_from_string(text):
         return None
     
 ### Load the model
-model, processor = model_setup(model_id)
+pipe = model_setup(model_id)
 
 ### Title
 st.title("What do you eat in a day?")
