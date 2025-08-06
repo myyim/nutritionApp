@@ -1,5 +1,5 @@
 ### Nutrition app: What do you eat in a day?
-#### Nutrition analysis for your need
+#### Nutrition analysis for your need by sharing your daily meal pictures
 ---
 
 Build a Nutrition App Powered by Google Gemma 3n with Streamlit
